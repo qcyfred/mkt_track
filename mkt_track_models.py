@@ -27,9 +27,9 @@ class AIndexBia(Base):
 
     sec_code = Column(ForeignKey('a_index_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    bias_20 = Column(Float)
-    bias_60 = Column(Float)
-    bias_120 = Column(Float)
+    value_20 = Column(Float)
+    value_60 = Column(Float)
+    value_120 = Column(Float)
 
     a_index_description = relationship('AIndexDescription')
 
@@ -40,9 +40,9 @@ class AIndexBiasQuantile(Base):
     sec_code = Column(ForeignKey('a_index_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
     observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
-    bias_20 = Column(Float)
-    bias_60 = Column(Float)
-    bias_120 = Column(Float)
+    value_20 = Column(Float)
+    value_60 = Column(Float)
+    value_120 = Column(Float)
 
     a_index_description = relationship('AIndexDescription')
 
@@ -66,9 +66,9 @@ class AShareBia(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    bias_20 = Column(Float)
-    bias_60 = Column(Float)
-    bias_120 = Column(Float)
+    value_20 = Column(Float)
+    value_60 = Column(Float)
+    value_120 = Column(Float)
 
     a_share_description = relationship('AShareDescription')
 
@@ -79,9 +79,9 @@ class AShareBiasQuantile(Base):
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
     observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
-    bias_20 = Column(Float)
-    bias_60 = Column(Float)
-    bias_120 = Column(Float)
+    value_20 = Column(Float)
+    value_60 = Column(Float)
+    value_120 = Column(Float)
 
     a_share_description = relationship('AShareDescription')
 
@@ -121,9 +121,9 @@ class ASharePbQuantile(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    pb_20 = Column(Float)
-    pb_60 = Column(Float)
-    pb_120 = Column(Float)
+    value_20 = Column(Float)
+    value_60 = Column(Float)
+    value_120 = Column(Float)
 
     a_share_description = relationship('AShareDescription')
 
@@ -133,8 +133,8 @@ class ASharePeQuantile(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    pe_20 = Column(Float)
-    pe_60 = Column(Float)
-    pe_120 = Column(Float)
+    value_20 = Column(Float)
+    value_60 = Column(Float)
+    value_120 = Column(Float)
 
     a_share_description = relationship('AShareDescription')
