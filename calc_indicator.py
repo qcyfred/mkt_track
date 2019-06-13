@@ -31,20 +31,39 @@ def calc_bias(raw_df, win_len=20):
     return df[['value_%d' % win_len]]
 
 
-def get_equity_market_eod(sec_code, is_index=False):
+# TODO: 装饰器，ensure_list。 是否需要提供复权的选项？
+# TODO: 并没有指定起止日期
+# TODO: 如果fields是None，就查询全表
+def get_equity_market_eod(sec_code, fields=None, is_index=False):
+    if isinstance(fields, list):
+        pass
+    elif isinstance(fields, str):
+        fields = [fields]
+
     if is_index:
-        sql = select([AIndexEodPrice.trade_date, AIndexEodPrice.close]).where(AIndexEodPrice.sec_code.__eq__(sec_code))
+        query_fields = [eval('AIndexEodPrice.' + field) for field in fields]
+        query_fields.extend([AIndexEodPrice.sec_code, AIndexEodPrice.trade_date])
+        sql = select(query_fields).where(AIndexEodPrice.sec_code.__eq__(sec_code)).order_by(AIndexEodPrice.trade_date)
         df = pd.read_sql(sql, engine, index_col='trade_date')
     else:
-        sql = select([AShareEodPrice.trade_date, AShareEodPrice.close]).where(AShareEodPrice.sec_code.__eq__(sec_code))
+        query_fields = [eval('AShareEodPrice.' + field) for field in fields]
+        query_fields.extend([AShareEodPrice.sec_code, AShareEodPrice.trade_date])
+        sql = select(query_fields).where(AShareEodPrice.sec_code.__eq__(sec_code)).order_by(AShareEodPrice.trade_date)
         df = pd.read_sql(sql, engine, index_col='trade_date')
 
     return df
 
 
+# 注意，这里只有上证50成分股代码
+def get_all_stk_codes():
+    sql = select([AShareDescription.sec_code])
+    df = pd.read_sql(sql, engine)
+    return df['sec_code'].tolist()
+
+
 def calc_and_save_index_bias(sec_codes):
     for sec_code in sec_codes:
-        close_df = get_equity_market_eod(sec_code, is_index=True)
+        close_df = get_equity_market_eod(sec_code, fields='close', is_index=True)
         bias_dfs = []
         win_lens = [20, 60, 120]
         for win_len in win_lens:
@@ -67,11 +86,12 @@ calc_and_save_index_bias(sec_codes)  # 指数乖离率
 # TODO: Bug: 股票的bias，要用复权的收盘价来计算
 def calc_and_save_stock_bias(sec_codes):
     for sec_code in sec_codes:
-        close_df = get_equity_market_eod(sec_code, is_index=False)
+        df = get_equity_market_eod(sec_code, fields=['close', 'adjfactor'], is_index=False)
+        df['close'] = df['close'] * df['adjfactor']  # 后复权
         bias_dfs = []
         win_lens = [20, 60, 120]
         for win_len in win_lens:
-            bias_df = calc_bias(close_df, win_len)
+            bias_df = calc_bias(df[['close']], win_len) # 这里是后复权价
             bias_dfs.append(bias_df)
 
         bias_df = pd.concat(bias_dfs, axis=1)
@@ -81,9 +101,7 @@ def calc_and_save_stock_bias(sec_codes):
         bias_df.to_sql(AShareBia.__tablename__, engine, index=False, if_exists='append')
 
 
-sql = select([AShareDescription.sec_code])
-df = pd.read_sql(sql, engine)
-stk_codes = df['sec_code'].tolist()
+stk_codes = get_all_stk_codes()
 calc_and_save_stock_bias(stk_codes)  # 股票乖离率
 
 
@@ -114,6 +132,8 @@ def calc_and_save_index_bias_quantile():
             last_bias = bias_df['value_%d' % win_len][-1]
             bias_arr = bias_df['value_%d' % win_len].values
             bias_arr.sort()  # 注意，会改变bias_arr本来的内容
+            if np.isnan(last_bias):
+                raise ValueError('最后一天last_bias是nan，检查数据')
             last_bias_idx = np.argwhere(bias_arr == last_bias)[0][0]
             last_bias_quantile = last_bias_idx / observation_period
             last_bias_quantile_dict[win_len] = last_bias_quantile  # 分位数
@@ -150,6 +170,8 @@ def calc_and_save_stock_bias_quantile():
             last_bias = bias_df['value_%d' % win_len][-1]
             bias_arr = bias_df['value_%d' % win_len].values
             bias_arr.sort()  # 注意，会改变bias_arr本来的内容
+            if np.isnan(last_bias):
+                raise ValueError('最新数据是nan，检查数据')
             last_bias_idx = np.argwhere(bias_arr == last_bias)[0][0]
             last_bias_quantile = last_bias_idx / observation_period
             last_bias_quantile_dict[win_len] = last_bias_quantile  # 分位数
@@ -197,6 +219,8 @@ def calc_and_save_stock_pe_quantile():
             last_value = value_df['pe_ttm'][-1]
             value_arr = value_df['pe_ttm'].values
             value_arr.sort()  # 注意，会改变bias_arr本来的内容
+            if np.isnan(last_value):
+                raise ValueError('最新数据是nan，检查数据')
             last_value_idx = np.argwhere(value_arr == last_value)[0][0]
             last_value_quantile = last_value_idx / observation_period
             last_value_quantile_dict[win_len] = last_value_quantile  # 分位数
@@ -230,9 +254,11 @@ def calc_and_save_stock_pb_quantile():
         last_value_quantile_dict = dict()
         last_trade_date = value_df.index[-1]
         for win_len in win_lens:
-            last_value = value_df['pb_ttm'][-1]
-            value_arr = value_df['pb_ttm'].values
+            last_value = value_df['pb'][-1]
+            value_arr = value_df['pb'].values
             value_arr.sort()  # 注意，会改变bias_arr本来的内容
+            if np.isnan(last_value):
+                raise ValueError('最新数据是nan，检查数据')
             last_value_idx = np.argwhere(value_arr == last_value)[0][0]
             last_value_quantile = last_value_idx / observation_period
             last_value_quantile_dict[win_len] = last_value_quantile  # 分位数

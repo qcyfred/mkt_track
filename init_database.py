@@ -96,7 +96,7 @@ def init_a_share_fin_pit():
                 new_obj.trade_date = trade_date
                 new_obj.fa_bps = trans_number_type(fa_bps_mat[i, j])
                 new_obj.pe_ttm = trans_number_type(pe_ttm_mat[i, j])
-                new_obj.pb_ttm = trans_number_type(pb_mat[i, j])
+                new_obj.pb = trans_number_type(pb_mat[i, j])
 
                 session.add(new_obj)
 
