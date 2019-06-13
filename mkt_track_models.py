@@ -96,7 +96,7 @@ class AShareEodPrice(Base):
     trade_date = Column(Date, primary_key=True, nullable=False)
     close = Column(Float)
     pct_chg = Column(Float)
-    adj_factor = Column(Float)
+    adjfactor = Column(Float)
 
     a_share_description = relationship('AShareDescription')
 

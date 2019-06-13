@@ -41,13 +41,13 @@ def init_a_share_eod_prices():
     close_df = pd.concat(close_dfs)
     pct_chg_df = pd.concat(pct_chg_dfs)
 
-    adj_factor_df = pd.read_csv('csv/cpnt_adj_factor.csv', index_col='DateTime')
+    adjfactor_df = pd.read_csv('csv/cpnt_adjfactor.csv', index_col='DateTime')
     sec_codes = close_df.columns
     close_df.index = pd.to_datetime(close_df.index)
     trade_dates = close_df.index.date
     close_mat = close_df.values
     pct_chg_mat = pct_chg_df.values
-    adj_factor_mat = adj_factor_df.values
+    adjfactor_mat = adjfactor_df.values
 
     for i in range(len(trade_dates)):
         for j in range(len(sec_codes)):
@@ -59,7 +59,7 @@ def init_a_share_eod_prices():
             new_obj.trade_date = trade_date
             new_obj.close = trans_number_type(close_mat[i, j])
             new_obj.pct_chg = trans_number_type(pct_chg_mat[i, j])
-            new_obj.adj_factor = trans_number_type(adj_factor_mat[i, j])
+            new_obj.adjfactor = trans_number_type(adjfactor_mat[i, j])
 
             session.add(new_obj)
 
