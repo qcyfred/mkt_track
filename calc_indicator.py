@@ -64,6 +64,7 @@ calc_and_save_index_bias(sec_codes)  # 指数乖离率
 
 
 # 个股bias
+# TODO: Bug: 股票的bias，要用复权的收盘价来计算
 def calc_and_save_stock_bias(sec_codes):
     for sec_code in sec_codes:
         close_df = get_equity_market_eod(sec_code, is_index=False)
