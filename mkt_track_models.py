@@ -39,7 +39,7 @@ class AIndexBiasQuantile(Base):
 
     sec_code = Column(ForeignKey('a_index_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
+    observation_period = Column(INTEGER(11))
     value_20 = Column(Float(asdecimal=True))
     value_60 = Column(Float(asdecimal=True))
     value_120 = Column(Float(asdecimal=True))
@@ -78,7 +78,7 @@ class AShareBiasQuantile(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
+    observation_period = Column(INTEGER(11))
     value_20 = Column(Float(asdecimal=True))
     value_60 = Column(Float(asdecimal=True))
     value_120 = Column(Float(asdecimal=True))
@@ -121,9 +121,8 @@ class ASharePbQuantile(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    value_20 = Column(Float(asdecimal=True))
-    value_60 = Column(Float(asdecimal=True))
-    value_120 = Column(Float(asdecimal=True))
+    observation_period = Column(INTEGER(11))
+    val = Column(Float(asdecimal=True))
 
     a_share_description = relationship('AShareDescription')
 
@@ -133,8 +132,7 @@ class ASharePeQuantile(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    value_20 = Column(Float(asdecimal=True))
-    value_60 = Column(Float(asdecimal=True))
-    value_120 = Column(Float(asdecimal=True))
+    observation_period = Column(INTEGER(11))
+    val = Column(Float(asdecimal=True))
 
     a_share_description = relationship('AShareDescription')

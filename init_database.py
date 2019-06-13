@@ -8,7 +8,7 @@ from mkt_track_models import (AIndexDescription,
                               AShareEodPrice,
                               AShareFinPit)
 import pandas as pd
-from mkt_track_utils import trans_number_type
+from mkt_track_utils import trans_number_to_float
 
 # 初始化数据库连接:
 engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=True)
@@ -57,9 +57,9 @@ def init_a_share_eod_prices():
             new_obj = AShareEodPrice()
             new_obj.sec_code = sec_code
             new_obj.trade_date = trade_date
-            new_obj.close = trans_number_type(close_mat[i, j])
-            new_obj.pct_chg = trans_number_type(pct_chg_mat[i, j])
-            new_obj.adjfactor = trans_number_type(adjfactor_mat[i, j])
+            new_obj.close = trans_number_to_float(close_mat[i, j])
+            new_obj.pct_chg = trans_number_to_float(pct_chg_mat[i, j])
+            new_obj.adjfactor = trans_number_to_float(adjfactor_mat[i, j])
 
             session.add(new_obj)
 
@@ -94,9 +94,9 @@ def init_a_share_fin_pit():
                 new_obj = AShareFinPit()
                 new_obj.sec_code = sec_code
                 new_obj.trade_date = trade_date
-                new_obj.fa_bps = trans_number_type(fa_bps_mat[i, j])
-                new_obj.pe_ttm = trans_number_type(pe_ttm_mat[i, j])
-                new_obj.pb = trans_number_type(pb_mat[i, j])
+                new_obj.fa_bps = trans_number_to_float(fa_bps_mat[i, j])
+                new_obj.pe_ttm = trans_number_to_float(pe_ttm_mat[i, j])
+                new_obj.pb = trans_number_to_float(pb_mat[i, j])
 
                 session.add(new_obj)
 

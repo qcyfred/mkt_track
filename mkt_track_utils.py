@@ -3,7 +3,7 @@ import numpy as np
 
 
 # 把np.float转为普通float
-def trans_number_type(x):
+def trans_number_to_float(x):
     if np.isnan(x):
         x = None
     else:

@@ -14,7 +14,7 @@ from mkt_track_models import (AShareDescription,
                               ASharePeQuantile,
                               ASharePbQuantile,
                               AShareFinPit)
-from mkt_track_utils import trans_number_type
+from mkt_track_utils import trans_number_to_float
 
 # 初始化数据库连接:
 engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=False)
@@ -91,7 +91,7 @@ def calc_and_save_stock_bias(sec_codes):
         bias_dfs = []
         win_lens = [20, 60, 120]
         for win_len in win_lens:
-            bias_df = calc_bias(df[['close']], win_len) # 这里是后复权价
+            bias_df = calc_bias(df[['close']], win_len)  # 这里是后复权价
             bias_dfs.append(bias_df)
 
         bias_df = pd.concat(bias_dfs, axis=1)
@@ -117,7 +117,7 @@ def get_bias_eod(sec_code, is_index=False):
 
 
 def calc_and_save_index_bias_quantile():
-    observation_period = 120
+    observation_period = 250
     win_lens = [20, 60, 120]
 
     session = DBSession()
@@ -129,6 +129,7 @@ def calc_and_save_index_bias_quantile():
         last_bias_quantile_dict = dict()
         last_trade_date = bias_df.index[-1]
         for win_len in win_lens:
+            bias_df['value_%d' % win_len] = bias_df['value_%d' % win_len].abs()  # bias全部转成 非负数
             last_bias = bias_df['value_%d' % win_len][-1]
             bias_arr = bias_df['value_%d' % win_len].values
             bias_arr.sort()  # 注意，会改变bias_arr本来的内容
@@ -141,9 +142,9 @@ def calc_and_save_index_bias_quantile():
         new_obj = AIndexBiasQuantile()
         new_obj.sec_code = sec_code
         new_obj.trade_date = last_trade_date
-        new_obj.value_20 = trans_number_type(last_bias_quantile_dict[20])
-        new_obj.value_60 = trans_number_type(last_bias_quantile_dict[60])
-        new_obj.value_120 = trans_number_type(last_bias_quantile_dict[120])
+        new_obj.value_20 = trans_number_to_float(last_bias_quantile_dict[20])
+        new_obj.value_60 = trans_number_to_float(last_bias_quantile_dict[60])
+        new_obj.value_120 = trans_number_to_float(last_bias_quantile_dict[120])
         new_obj.observation_period = observation_period
         session.add(new_obj)
 
@@ -152,7 +153,7 @@ def calc_and_save_index_bias_quantile():
 
 
 def calc_and_save_stock_bias_quantile():
-    observation_period = 120
+    observation_period = 250
     win_lens = [20, 60, 120]
 
     session = DBSession()
@@ -167,6 +168,7 @@ def calc_and_save_stock_bias_quantile():
         last_bias_quantile_dict = dict()
         last_trade_date = bias_df.index[-1]
         for win_len in win_lens:
+            bias_df['value_%d' % win_len] = bias_df['value_%d' % win_len].abs()  # bias全部转成 非负数
             last_bias = bias_df['value_%d' % win_len][-1]
             bias_arr = bias_df['value_%d' % win_len].values
             bias_arr.sort()  # 注意，会改变bias_arr本来的内容
@@ -179,9 +181,9 @@ def calc_and_save_stock_bias_quantile():
         new_obj = AShareBiasQuantile()
         new_obj.sec_code = sec_code
         new_obj.trade_date = last_trade_date
-        new_obj.value_20 = trans_number_type(last_bias_quantile_dict[20])
-        new_obj.value_60 = trans_number_type(last_bias_quantile_dict[60])
-        new_obj.value_120 = trans_number_type(last_bias_quantile_dict[120])
+        new_obj.value_20 = trans_number_to_float(last_bias_quantile_dict[20])
+        new_obj.value_60 = trans_number_to_float(last_bias_quantile_dict[60])
+        new_obj.value_120 = trans_number_to_float(last_bias_quantile_dict[120])
         new_obj.observation_period = observation_period
         session.add(new_obj)
 
@@ -201,8 +203,7 @@ def get_share_fin_pit(sec_code):
 
 
 def calc_and_save_stock_pe_quantile():
-    observation_period = 120
-    win_lens = [20, 60, 120]
+    observation_period = 750
 
     session = DBSession()
 
@@ -212,25 +213,20 @@ def calc_and_save_stock_pe_quantile():
 
     for sec_code in sec_codes:
         value_df = get_share_fin_pit(sec_code)
-        value_df = value_df.iloc[-observation_period:].copy()  # 观察期内所有bias。 注意，sort会改变原来的值
-        last_value_quantile_dict = dict()
+        value_df = value_df.iloc[-observation_period:].copy()  # 注意，sort会改变原来的值
         last_trade_date = value_df.index[-1]
-        for win_len in win_lens:
-            last_value = value_df['pe_ttm'][-1]
-            value_arr = value_df['pe_ttm'].values
-            value_arr.sort()  # 注意，会改变bias_arr本来的内容
-            if np.isnan(last_value):
-                raise ValueError('最新数据是nan，检查数据')
-            last_value_idx = np.argwhere(value_arr == last_value)[0][0]
-            last_value_quantile = last_value_idx / observation_period
-            last_value_quantile_dict[win_len] = last_value_quantile  # 分位数
+        last_value = value_df['pe_ttm'][-1]
+        value_arr = value_df['pe_ttm'].values
+        value_arr.sort()  # 注意，会改变bias_arr本来的内容
+        if np.isnan(last_value):
+            raise ValueError('最新数据是nan，检查数据')
+        last_value_idx = np.argwhere(value_arr == last_value)[0][0]
+        last_value_quantile = last_value_idx / observation_period
 
         new_obj = ASharePeQuantile()
         new_obj.sec_code = sec_code
         new_obj.trade_date = last_trade_date
-        new_obj.value_20 = trans_number_type(last_value_quantile_dict[20])
-        new_obj.value_60 = trans_number_type(last_value_quantile_dict[60])
-        new_obj.value_120 = trans_number_type(last_value_quantile_dict[120])
+        new_obj.val = trans_number_to_float(last_value_quantile)
         new_obj.observation_period = observation_period
         session.add(new_obj)
 
@@ -239,8 +235,7 @@ def calc_and_save_stock_pe_quantile():
 
 
 def calc_and_save_stock_pb_quantile():
-    observation_period = 120
-    win_lens = [20, 60, 120]
+    observation_period = 750
 
     session = DBSession()
 
@@ -250,28 +245,22 @@ def calc_and_save_stock_pb_quantile():
 
     for sec_code in sec_codes:
         value_df = get_share_fin_pit(sec_code)
-        value_df = value_df.iloc[-observation_period:].copy()  # 观察期内所有bias。 注意，sort会改变原来的值
-        last_value_quantile_dict = dict()
+        value_df = value_df.iloc[-observation_period:].copy()  # sort会改变原来的值
         last_trade_date = value_df.index[-1]
-        for win_len in win_lens:
-            last_value = value_df['pb'][-1]
-            value_arr = value_df['pb'].values
-            value_arr.sort()  # 注意，会改变bias_arr本来的内容
-            if np.isnan(last_value):
-                raise ValueError('最新数据是nan，检查数据')
-            last_value_idx = np.argwhere(value_arr == last_value)[0][0]
-            last_value_quantile = last_value_idx / observation_period
-            last_value_quantile_dict[win_len] = last_value_quantile  # 分位数
+        last_value = value_df['pb'][-1]
+        value_arr = value_df['pb'].values
+        value_arr.sort()  # 注意，会改变bias_arr本来的内容
+        if np.isnan(last_value):
+            raise ValueError('最新数据是nan，检查数据')
+        last_value_idx = np.argwhere(value_arr == last_value)[0][0]
+        last_value_quantile = last_value_idx / observation_period
 
         new_obj = ASharePbQuantile()
         new_obj.sec_code = sec_code
         new_obj.trade_date = last_trade_date
-        new_obj.value_20 = trans_number_type(last_value_quantile_dict[20])
-        new_obj.value_60 = trans_number_type(last_value_quantile_dict[60])
-        new_obj.value_120 = trans_number_type(last_value_quantile_dict[120])
+        new_obj.val = trans_number_to_float(last_value_quantile)
         new_obj.observation_period = observation_period
         session.add(new_obj)
-
     session.commit()
     session.close()
 
