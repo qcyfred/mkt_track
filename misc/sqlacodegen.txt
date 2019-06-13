@@ -1,2 +1,2 @@
-
+不能用powershell，否则编码可能会出问题
 sqlacodegen mysql://root:root@localhost:3306/db_mkt_track > mkt_track_models.py
