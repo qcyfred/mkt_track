@@ -39,7 +39,7 @@ class AIndexBiasQuantile(Base):
 
     sec_code = Column(ForeignKey('a_index_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    observation_period = Column(INTEGER(11))
+    observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
     value_20 = Column(Float(asdecimal=True))
     value_60 = Column(Float(asdecimal=True))
     value_120 = Column(Float(asdecimal=True))
@@ -61,6 +61,30 @@ class AIndexEodPrice(Base):
     a_index_description = relationship('AIndexDescription')
 
 
+class AShareAlphaDd(Base):
+    __tablename__ = 'a_share_alpha_dd'
+    __table_args__ = (
+        Index('trade_date', 'trade_date', 'sec_code'),
+    )
+
+    sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
+    trade_date = Column(Date, primary_key=True, nullable=False)
+    value_20 = Column(Float(asdecimal=True))
+
+    a_share_description = relationship('AShareDescription')
+
+
+class AShareAlphaDdQuantile(Base):
+    __tablename__ = 'a_share_alpha_dd_quantile'
+
+    sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
+    trade_date = Column(Date, primary_key=True, nullable=False, index=True)
+    observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
+    value_20 = Column(Float(asdecimal=True))
+
+    a_share_description = relationship('AShareDescription')
+
+
 class AShareBia(Base):
     __tablename__ = 'a_share_bias'
 
@@ -78,7 +102,7 @@ class AShareBiasQuantile(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    observation_period = Column(INTEGER(11))
+    observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
     value_20 = Column(Float(asdecimal=True))
     value_60 = Column(Float(asdecimal=True))
     value_120 = Column(Float(asdecimal=True))
@@ -121,7 +145,7 @@ class ASharePbQuantile(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    observation_period = Column(INTEGER(11))
+    observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
     val = Column(Float(asdecimal=True))
 
     a_share_description = relationship('AShareDescription')
@@ -132,7 +156,7 @@ class ASharePeQuantile(Base):
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
-    observation_period = Column(INTEGER(11))
+    observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
     val = Column(Float(asdecimal=True))
 
     a_share_description = relationship('AShareDescription')

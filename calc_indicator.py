@@ -13,7 +13,9 @@ from mkt_track_models import (AShareDescription,
                               AShareEodPrice,
                               ASharePeQuantile,
                               ASharePbQuantile,
-                              AShareFinPit)
+                              AShareFinPit,
+                              AShareAlphaDd,
+                              AShareAlphaDdQuantile)
 from mkt_track_utils import trans_number_to_float
 
 # 初始化数据库连接:
@@ -77,11 +79,6 @@ def calc_and_save_index_bias(sec_codes):
         bias_df.to_sql(AIndexBia.__tablename__, engine, index=False, if_exists='append')
 
 
-# # 指数bias
-sec_codes = ['000016.SH', '000300.SH', '000905.SH']
-calc_and_save_index_bias(sec_codes)  # 指数乖离率
-
-
 # 个股bias
 # TODO: Bug: 股票的bias，要用复权的收盘价来计算
 def calc_and_save_stock_bias(sec_codes):
@@ -99,10 +96,6 @@ def calc_and_save_stock_bias(sec_codes):
         bias_df.reset_index(inplace=True)
 
         bias_df.to_sql(AShareBia.__tablename__, engine, index=False, if_exists='append')
-
-
-stk_codes = get_all_stk_codes()
-calc_and_save_stock_bias(stk_codes)  # 股票乖离率
 
 
 def get_bias_eod(sec_code, is_index=False):
@@ -191,11 +184,7 @@ def calc_and_save_stock_bias_quantile():
     session.close()
 
 
-calc_and_save_index_bias_quantile()  # 指数乖离率分位数
-calc_and_save_stock_bias_quantile()  # 股票乖离率分位数
-
-
-def get_share_fin_pit(sec_code):
+def get_a_share_fin_pit(sec_code):
     sql = select([AShareFinPit]).where(
         AShareFinPit.sec_code.__eq__(sec_code))
     df = pd.read_sql(sql, engine, index_col='trade_date')
@@ -212,7 +201,7 @@ def calc_and_save_stock_pe_quantile():
     sec_codes = df['sec_code'].tolist()
 
     for sec_code in sec_codes:
-        value_df = get_share_fin_pit(sec_code)
+        value_df = get_a_share_fin_pit(sec_code)
         value_df = value_df.iloc[-observation_period:].copy()  # 注意，sort会改变原来的值
         last_trade_date = value_df.index[-1]
         last_value = value_df['pe_ttm'][-1]
@@ -244,7 +233,7 @@ def calc_and_save_stock_pb_quantile():
     sec_codes = df['sec_code'].tolist()
 
     for sec_code in sec_codes:
-        value_df = get_share_fin_pit(sec_code)
+        value_df = get_a_share_fin_pit(sec_code)
         value_df = value_df.iloc[-observation_period:].copy()  # sort会改变原来的值
         last_trade_date = value_df.index[-1]
         last_value = value_df['pb'][-1]
@@ -265,5 +254,116 @@ def calc_and_save_stock_pb_quantile():
     session.close()
 
 
+# # 指数bias
+sec_codes = ['000016.SH', '000300.SH', '000905.SH']
+calc_and_save_index_bias(sec_codes)  # 指数乖离率
+
+stk_codes = get_all_stk_codes()
+calc_and_save_stock_bias(stk_codes)  # 股票乖离率
+
+calc_and_save_index_bias_quantile()  # 指数乖离率分位数
+calc_and_save_stock_bias_quantile()  # 股票乖离率分位数
+
 calc_and_save_stock_pe_quantile()  # 股票pe分位数
 calc_and_save_stock_pb_quantile()  # 股票pb分位数
+
+
+def get_a_share_eod():
+    fields = ['pct_chg']
+    query_fields = [eval('AShareEodPrice.' + field) for field in fields]
+    query_fields.extend([AShareEodPrice.sec_code, AShareEodPrice.trade_date])
+    sql = select(query_fields)
+    df = pd.read_sql(sql, engine, index_col='trade_date')
+    df = df.pivot(columns='sec_code', values='pct_chg')
+
+    return df
+
+
+# 超额收益最近20日的dd
+def calc_dd(s):
+    max_value = s.max()
+    dd = s[-1] / max_value - 1
+    return dd
+
+
+# 个股超额收益的近期回撤
+def calc_and_save_dd():
+    win_len = 20
+    df = get_a_share_eod()
+    index_df = get_equity_market_eod('000016.SH', 'pct_chg', is_index=True)
+    alpha_pct_df = pd.DataFrame(df.values - index_df[['pct_chg']].values, columns=df.columns, index=df.index)
+    alpha_df = alpha_pct_df.divide(100)
+    alpha_unit_value_df = (1 + alpha_df).cumprod()
+
+    dd_df = alpha_unit_value_df.rolling(win_len).apply(calc_dd)
+    # print(dd_df)
+
+    dd_mat = dd_df.values
+    trade_dates = dd_df.index
+    sec_codes = dd_df.columns
+    session = DBSession()
+
+    for i in range(len(trade_dates)):
+        for j in range(len(sec_codes)):
+            trade_date = trade_dates[i]
+            sec_code = sec_codes[j]
+
+            new_obj = AShareAlphaDd()
+            new_obj.sec_code = sec_code
+            new_obj.trade_date = trade_date
+            new_obj.value_20 = trans_number_to_float(dd_mat[i, j])
+
+            session.add(new_obj)
+
+    session.commit()
+    session.close()
+
+
+def get_a_share_alpha_dd(sec_code):
+    sql = select([AShareAlphaDd]).where(
+        AShareAlphaDd.sec_code.__eq__(sec_code))
+    df = pd.read_sql(sql, engine, index_col='trade_date')
+    return df
+
+
+# 个股超额收益的近期回撤的超额收益
+def calc_and_save_alpha_dd_quantile():
+    observation_period = 250
+    win_len = 20
+
+    session = DBSession()
+
+    sec_codes = get_all_stk_codes()
+
+    for sec_code in sec_codes:
+        value_df = get_a_share_alpha_dd(sec_code)
+        value_df = value_df.iloc[-observation_period:].copy()  # 注意，sort会改变原来的值
+
+        value_df['value_%d' % win_len] = value_df['value_%d' % win_len].abs()
+        last_trade_date = value_df.index[-1]
+        last_value = value_df['value_%d' % win_len][-1]
+        # 回撤为0的数据，分位数为0
+        if last_value < 1e-6:
+            last_value_quantile = 0
+        else:
+            value_arr = value_df['value_%d' % win_len].values
+            value_arr = np.array([x for x in value_arr if x > 1e-6])
+            value_arr.sort()  # 注意，会改变bias_arr本来的内容
+            if np.isnan(last_value):
+                raise ValueError('最新数据是nan，检查数据')
+            last_value_idx = np.argwhere(value_arr == last_value)[0][0]
+            last_value_quantile = last_value_idx / observation_period
+
+        new_obj = AShareAlphaDdQuantile()
+        new_obj.sec_code = sec_code
+        new_obj.trade_date = last_trade_date
+        new_obj.value_20 = trans_number_to_float(last_value_quantile)
+        new_obj.observation_period = observation_period
+        session.add(new_obj)
+
+    session.commit()
+    session.close()
+
+
+calc_and_save_dd()  # 个股超额收益的近期回撤
+calc_and_save_alpha_dd_quantile()  # 个股超额收益的近期回撤区间内分位数
