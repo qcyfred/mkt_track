@@ -1,10 +1,12 @@
 # coding: utf-8
+# TODO: 注意起止日期
 from sqlalchemy import create_engine
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 import numpy as np
 from mkt_track_models import (AShareDescription,
+                              ASse50Description,
                               AIndexEodPrice,
                               AIndexBiasQuantile,
                               AShareBiasQuantile,
@@ -19,7 +21,7 @@ from mkt_track_models import (AShareDescription,
 from mkt_track_utils import trans_number_to_float
 
 # 初始化数据库连接:
-engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=False)
+engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=True)
 
 # 创建DBSession类型:
 DBSession = sessionmaker(bind=engine)
@@ -56,9 +58,8 @@ def get_equity_market_eod(sec_code, fields=None, is_index=False):
     return df
 
 
-# 注意，这里只有上证50成分股代码
-def get_all_stk_codes():
-    sql = select([AShareDescription.sec_code])
+def get_sse50_stk_codes():
+    sql = select([ASse50Description.sec_code])
     df = pd.read_sql(sql, engine)
     return df['sec_code'].tolist()
 
@@ -151,9 +152,7 @@ def calc_and_save_stock_bias_quantile():
 
     session = DBSession()
 
-    sql = select([AShareDescription.sec_code])
-    df = pd.read_sql(sql, engine)
-    sec_codes = df['sec_code'].tolist()
+    sec_codes = get_sse50_stk_codes()
 
     for sec_code in sec_codes:
         bias_df = get_bias_eod(sec_code, is_index=False)
@@ -196,9 +195,7 @@ def calc_and_save_stock_pe_quantile():
 
     session = DBSession()
 
-    sql = select([AShareDescription.sec_code])
-    df = pd.read_sql(sql, engine)
-    sec_codes = df['sec_code'].tolist()
+    sec_codes = get_sse50_stk_codes()
 
     for sec_code in sec_codes:
         value_df = get_a_share_fin_pit(sec_code)
@@ -228,9 +225,7 @@ def calc_and_save_stock_pb_quantile():
 
     session = DBSession()
 
-    sql = select([AShareDescription.sec_code])
-    df = pd.read_sql(sql, engine)
-    sec_codes = df['sec_code'].tolist()
+    sec_codes = get_sse50_stk_codes()
 
     for sec_code in sec_codes:
         value_df = get_a_share_fin_pit(sec_code)
@@ -238,7 +233,7 @@ def calc_and_save_stock_pb_quantile():
         last_trade_date = value_df.index[-1]
         last_value = value_df['pb'][-1]
         value_arr = value_df['pb'].values
-        value_arr.sort()  # 注意，会改变bias_arr本来的内容
+        value_arr.sort()  # 注意，sort会改变bias_arr本来的内容
         if np.isnan(last_value):
             raise ValueError('最新数据是nan，检查数据')
         last_value_idx = np.argwhere(value_arr == last_value)[0][0]
@@ -254,25 +249,12 @@ def calc_and_save_stock_pb_quantile():
     session.close()
 
 
-# # 指数bias
-sec_codes = ['000016.SH', '000300.SH', '000905.SH']
-calc_and_save_index_bias(sec_codes)  # 指数乖离率
-
-stk_codes = get_all_stk_codes()
-calc_and_save_stock_bias(stk_codes)  # 股票乖离率
-
-calc_and_save_index_bias_quantile()  # 指数乖离率分位数
-calc_and_save_stock_bias_quantile()  # 股票乖离率分位数
-
-calc_and_save_stock_pe_quantile()  # 股票pe分位数
-calc_and_save_stock_pb_quantile()  # 股票pb分位数
-
-
-def get_a_share_eod():
+# 注意起止日期
+def get_a_sse50_eod():
     fields = ['pct_chg']
     query_fields = [eval('AShareEodPrice.' + field) for field in fields]
     query_fields.extend([AShareEodPrice.sec_code, AShareEodPrice.trade_date])
-    sql = select(query_fields)
+    sql = select(query_fields).where(AShareEodPrice.trade_date >= '20160601')
     df = pd.read_sql(sql, engine, index_col='trade_date')
     df = df.pivot(columns='sec_code', values='pct_chg')
 
@@ -289,7 +271,7 @@ def calc_dd(s):
 # 个股超额收益的近期回撤
 def calc_and_save_dd():
     win_len = 20
-    df = get_a_share_eod()
+    df = get_a_sse50_eod()
     index_df = get_equity_market_eod('000016.SH', 'pct_chg', is_index=True)
     alpha_pct_df = pd.DataFrame(df.values - index_df[['pct_chg']].values, columns=df.columns, index=df.index)
     alpha_df = alpha_pct_df.divide(100)
@@ -333,7 +315,7 @@ def calc_and_save_alpha_dd_quantile():
 
     session = DBSession()
 
-    sec_codes = get_all_stk_codes()
+    sec_codes = get_sse50_stk_codes()
 
     for sec_code in sec_codes:
         value_df = get_a_share_alpha_dd(sec_code)
@@ -364,6 +346,19 @@ def calc_and_save_alpha_dd_quantile():
     session.commit()
     session.close()
 
+
+# 指数bias
+sec_codes = ['000016.SH', '000300.SH', '000905.SH']
+calc_and_save_index_bias(sec_codes)  # 指数乖离率
+
+stk_codes = get_sse50_stk_codes()
+calc_and_save_stock_bias(stk_codes)  # 股票乖离率
+
+calc_and_save_index_bias_quantile()  # 指数乖离率分位数
+calc_and_save_stock_bias_quantile()  # 股票乖离率分位数
+
+calc_and_save_stock_pe_quantile()  # 股票pe分位数
+calc_and_save_stock_pb_quantile()  # 股票pb分位数
 
 calc_and_save_dd()  # 个股超额收益的近期回撤
 calc_and_save_alpha_dd_quantile()  # 个股超额收益的近期回撤区间内分位数

@@ -22,6 +22,13 @@ class AShareDescription(Base):
     sec_name = Column(String(64), nullable=False)
 
 
+class ASse50Description(Base):
+    __tablename__ = 'a_sse50_description'
+
+    sec_code = Column(String(32), primary_key=True)
+    sec_name = Column(String(64), nullable=False)
+
+
 class AIndexBia(Base):
     __tablename__ = 'a_index_bias'
 

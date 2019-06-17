@@ -6,6 +6,9 @@ truncate a_share_bias;
 truncate a_share_bias_quantile;
 truncate a_share_pb_quantile;
 truncate a_share_pe_quantile;
+truncate a_share_alpha_dd;
+truncate a_share_alpha_dd_quantile;
+
 
 
 DELETE FROM a_index_eod_prices WHERE trade_date > '20190610';
