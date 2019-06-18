@@ -15,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import (select,
                         delete)
 from mkt_track_models import (AIndexDescription,
+                              ChinaEtfPchRedmList,
                               ASse50Description,
                               AShareDescription,
                               AIndexEodPrice,
@@ -166,9 +167,36 @@ def update_a_sse50_description():
     latest_df.to_sql(ASse50Description.__tablename__, con=engine, index=False, if_exists='append')
 
 
+def update_etfconstituent():
+    session = DBSession()
+    last_day_in_db = session.query(func.max(ChinaEtfPchRedmList.trade_date)).one()[0]
+    if last_day_in_db is not None:
+        next_trade_date = get_trade_date(last_day_in_db, 1)
+    else:
+        next_trade_date = get_trade_date(today_yyyymmdd, -750)
+
+    if next_trade_date <= last_date_in_wind:
+        temp = w.tdays(next_trade_date, last_date_in_wind, "")
+        trade_dates = temp.Data[0]
+
+        for trade_date in trade_dates:
+            temp = w.wset("etfconstituent",
+                          "date={today_yyyymmdd};windcode=510050.SH;"
+                          "field=wind_code,volume,cash_substitution_mark,"
+                          "cash_substitution_premium_ratio,fixed_substitution_amount".format(
+                              today_yyyymmdd=trade_date.strftime('%Y%m%d')))
+            df = pd.DataFrame(temp.Data).T
+            df.columns = temp.Fields
+            df.rename({'wind_code': 'sec_code'}, axis=1, inplace=True)
+            df['etf_sec_code'] = '510050.SH'
+            df['trade_date'] = today_yyyymmdd
+            df.to_sql(ChinaEtfPchRedmList.__tablename__, engine, index=False, if_exists='append')
+
+
 # 主程序
 # update_a_share_description()  # 所有A股
 # update_a_sse50_description()  # 更换成分股后运行
 
-update_a_index_eod_prices()  # 指数日行情
-update_a_share_eod_prices_and_fin_pit()  # 更新个股日行情和pb、pe数据（因为没有pb，所以用p/b，在下载数据的时候就算好了）
+# update_a_index_eod_prices()  # 指数日行情
+# update_a_share_eod_prices_and_fin_pit()  # 更新个股日行情和pb、pe数据（因为没有pb，所以用p/b，在下载数据的时候就算好了）
+# update_etfconstituent()  # 更新每日etf的申赎清单
