@@ -6,8 +6,10 @@ from mkt_track_models import (AIndexDescription,
                               AShareDescription,
                               AIndexEodPrice,
                               AShareEodPrice,
-                              AShareFinPit)
+                              AShareFinPit,
+                              ChinaEtfPchRedmList)
 import pandas as pd
+import os
 from mkt_track_utils import trans_number_to_float
 
 # 初始化数据库连接:
@@ -139,12 +141,36 @@ def init_a_index_eod_price():
     df.to_sql(AIndexEodPrice.__tablename__, con=engine, index=False, if_exists='append')
 
 
-Base.metadata.drop_all(engine)  # drop所有表
-Base.metadata.create_all(engine)  # 创建表结构
+def init_china_etf_pch_redm_list():
+    fs = os.listdir('csv/etf/')
+    dfs = []
+    for f in fs:
+        print(f)
+        try:
+            df = pd.read_csv('csv/etf/' + f, encoding='gb2312')
+        except Exception as e:
+            try:
+                df = pd.read_csv('csv/etf/' + f, encoding='utf-8')
+            except Exception as e2:
+                print(e2)
+            print(e)
+        dfs.append(df)
+    df = pd.concat(dfs)
+    del df['Unnamed: 0']
+    df.rename({'wind_code': 'sec_code'}, axis=1, inplace=True)
+    df['etf_sec_code'] = '510050.SH'
+    df.to_sql(ChinaEtfPchRedmList.__tablename__, con=engine, index=False, if_exists='append')
 
-init_a_share_description()  # 初始化股票info表
-init_a_share_eod_prices()  # 初始化股票日行情
-init_a_share_fin_pit()  # 初始化股票财务分析的pit数据
 
-init_a_index_description()  # 初始化指数info表
-init_a_index_eod_price()  # 初始化指数日行情
+# 慎用！！！！！！！！！！！！！！！！！！！！！！！！
+# Base.metadata.drop_all(engine)  # drop所有表
+# Base.metadata.create_all(engine)  # 创建表结构
+#
+# init_a_share_description()  # 初始化股票info表
+# init_a_share_eod_prices()  # 初始化股票日行情
+# init_a_share_fin_pit()  # 初始化股票财务分析的pit数据
+#
+# init_a_index_description()  # 初始化指数info表
+# init_a_index_eod_price()  # 初始化指数日行情
+
+# init_china_etf_pch_redm_list() # 初始化ETF的每日申赎清单

@@ -191,3 +191,17 @@ class ASharePeQuantile(Base):
     val = Column(Float(asdecimal=True))
 
     a_share_description = relationship('AShareDescription')
+
+
+class ChinaEtfPchRedmList(Base):
+    __tablename__ = 'china_etf_pch_redm_list'
+
+    trade_date = Column(Date, primary_key=True, nullable=False)
+    sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False)
+    etf_sec_code = Column(String(32), primary_key=True, nullable=False)
+    volume = Column(INTEGER(11))
+    cash_substitution_mark = Column(String(32))
+    cash_substitution_premium_ratio = Column(Float(asdecimal=True))
+    fixed_substitution_amount = Column(Float(asdecimal=True))
+
+    a_share_description = relationship('AShareDescription')
