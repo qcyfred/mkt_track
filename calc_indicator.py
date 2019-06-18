@@ -410,6 +410,21 @@ def calc_and_save_alpha_dd_quantile():
     session.close()
 
 
+# 清除数据库的计算结果
+sql_str = """TRUNCATE a_index_bias;
+TRUNCATE a_index_bias_quantile;
+TRUNCATE a_share_bias;
+TRUNCATE a_share_bias_quantile;
+TRUNCATE a_share_pb_quantile;
+TRUNCATE a_share_pe_quantile;
+TRUNCATE a_share_alpha;
+TRUNCATE a_share_alpha_quantile;
+TRUNCATE a_share_alpha_dd;
+TRUNCATE a_share_alpha_dd_quantile;"""
+sqls = sql_str.split('\n')
+for sql in sqls:
+    engine.execute(sql)
+
 # 指数bias
 index_codes = ['000016.SH', '000300.SH', '000905.SH']
 calc_and_save_index_bias(index_codes)  # 指数乖离率

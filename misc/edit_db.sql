@@ -1,15 +1,15 @@
 use db_mkt_track;
 
-truncate a_index_bias;
-truncate a_index_bias_quantile;
-truncate a_share_bias;
-truncate a_share_bias_quantile;
-truncate a_share_pb_quantile;
-truncate a_share_pe_quantile;
+TRUNCATE a_index_bias;
+TRUNCATE a_index_bias_quantile;
+TRUNCATE a_share_bias;
+TRUNCATE a_share_bias_quantile;
+TRUNCATE a_share_pb_quantile;
+TRUNCATE a_share_pe_quantile;
 TRUNCATE a_share_alpha;
 TRUNCATE a_share_alpha_quantile;
-truncate a_share_alpha_dd;
-truncate a_share_alpha_dd_quantile;
+TRUNCATE a_share_alpha_dd;
+TRUNCATE a_share_alpha_dd_quantile;
 
 
 
