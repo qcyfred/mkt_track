@@ -1,7 +1,8 @@
 # coding: utf-8
 # TODO: 注意起止日期
 from sqlalchemy import create_engine
-from sqlalchemy import select
+from sqlalchemy import (select,
+                        and_)
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 import numpy as np
@@ -258,7 +259,8 @@ def get_a_sse50_eod():
     fields = ['pct_chg']
     query_fields = [eval('AShareEodPrice.' + field) for field in fields]
     query_fields.extend([AShareEodPrice.sec_code, AShareEodPrice.trade_date])
-    sql = select(query_fields).where(AShareEodPrice.trade_date >= '20160601')
+    sql = select(query_fields).where(and_(AShareEodPrice.trade_date >= '20160601',
+                                          AShareEodPrice.sec_code == ASse50Description.sec_code))
     df = pd.read_sql(sql, engine, index_col='trade_date')
     df = df.pivot(columns='sec_code', values='pct_chg')
 
