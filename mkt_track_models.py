@@ -26,7 +26,7 @@ class ASse50Description(Base):
     __tablename__ = 'a_sse50_description'
 
     sec_code = Column(String(32), primary_key=True)
-    sec_name = Column(String(64), nullable=False)
+    sec_name = Column(String(64))
 
 
 class AIndexBia(Base):
@@ -68,6 +68,19 @@ class AIndexEodPrice(Base):
     a_index_description = relationship('AIndexDescription')
 
 
+class AShareAlpha(Base):
+    __tablename__ = 'a_share_alpha'
+    __table_args__ = (
+        Index('trade_date', 'trade_date', 'sec_code'),
+    )
+
+    sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
+    trade_date = Column(Date, primary_key=True, nullable=False)
+    value_20 = Column(Float(asdecimal=True))
+
+    a_share_description = relationship('AShareDescription')
+
+
 class AShareAlphaDd(Base):
     __tablename__ = 'a_share_alpha_dd'
     __table_args__ = (
@@ -83,6 +96,17 @@ class AShareAlphaDd(Base):
 
 class AShareAlphaDdQuantile(Base):
     __tablename__ = 'a_share_alpha_dd_quantile'
+
+    sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
+    trade_date = Column(Date, primary_key=True, nullable=False, index=True)
+    observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
+    value_20 = Column(Float(asdecimal=True))
+
+    a_share_description = relationship('AShareDescription')
+
+
+class AShareAlphaQuantile(Base):
+    __tablename__ = 'a_share_alpha_quantile'
 
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)

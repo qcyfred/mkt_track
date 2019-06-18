@@ -5,7 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 import numpy as np
-from mkt_track_models import (AShareDescription,
+from functools import reduce
+from mkt_track_models import (AShareAlpha,
+                              AShareAlphaQuantile,
                               ASse50Description,
                               AIndexEodPrice,
                               AIndexBiasQuantile,
@@ -110,6 +112,7 @@ def get_bias_eod(sec_code, is_index=False):
     return bias_df
 
 
+# bias加了abs
 def calc_and_save_index_bias_quantile():
     observation_period = 250
     win_lens = [20, 60, 120]
@@ -146,6 +149,7 @@ def calc_and_save_index_bias_quantile():
     session.close()
 
 
+# bias加了abs
 def calc_and_save_stock_bias_quantile():
     observation_period = 250
     win_lens = [20, 60, 120]
@@ -261,28 +265,10 @@ def get_a_sse50_eod():
     return df
 
 
-# 超额收益最近20日的dd
-def calc_dd(s):
-    max_value = s.max()
-    dd = s[-1] / max_value - 1
-    return dd
-
-
-# 个股超额收益的近期回撤
-def calc_and_save_dd():
-    win_len = 20
-    df = get_a_sse50_eod()
-    index_df = get_equity_market_eod('000016.SH', 'pct_chg', is_index=True)
-    alpha_pct_df = pd.DataFrame(df.values - index_df[['pct_chg']].values, columns=df.columns, index=df.index)
-    alpha_df = alpha_pct_df.divide(100)
-    alpha_unit_value_df = (1 + alpha_df).cumprod()
-
-    dd_df = alpha_unit_value_df.rolling(win_len).apply(calc_dd)
-    # print(dd_df)
-
-    dd_mat = dd_df.values
-    trade_dates = dd_df.index
-    sec_codes = dd_df.columns
+def save_df_into_db(df, clazz):
+    mat = df.values
+    trade_dates = df.index
+    sec_codes = df.columns
     session = DBSession()
 
     for i in range(len(trade_dates)):
@@ -290,15 +276,92 @@ def calc_and_save_dd():
             trade_date = trade_dates[i]
             sec_code = sec_codes[j]
 
-            new_obj = AShareAlphaDd()
+            new_obj = clazz()
             new_obj.sec_code = sec_code
             new_obj.trade_date = trade_date
-            new_obj.value_20 = trans_number_to_float(dd_mat[i, j])
+            new_obj.value_20 = trans_number_to_float(mat[i, j])
 
             session.add(new_obj)
 
     session.commit()
     session.close()
+
+
+# 计算个股每日的超额收益，个股涨跌幅与指数相减
+def calc_daily_alpha():
+    df = get_a_sse50_eod()
+    index_df = get_equity_market_eod('000016.SH', 'pct_chg', is_index=True)
+    alpha_pct_df = pd.DataFrame(df.values - index_df[['pct_chg']].values, columns=df.columns, index=df.index)
+    alpha_df = alpha_pct_df.divide(100)
+    return alpha_df
+
+
+def get_a_share_alpha(sec_code):
+    sql = select([AShareAlpha]).where(
+        AShareAlpha.sec_code.__eq__(sec_code))
+    df = pd.read_sql(sql, engine, index_col='trade_date')
+    return df
+
+
+# 个股超额收益的分位数（不加abs）
+def calc_and_save_alpha_quantile():
+    observation_period = 250
+    win_len = 20
+
+    session = DBSession()
+
+    sec_codes = get_sse50_stk_codes()
+
+    for sec_code in sec_codes:
+        value_df = get_a_share_alpha(sec_code)
+        value_df = value_df.iloc[-observation_period:].copy()  # 注意，sort会改变原来的值
+        last_trade_date = value_df.index[-1]
+        last_value = value_df['value_%d' % win_len][-1]
+        value_arr = value_df['value_%d' % win_len].values
+        value_arr = np.array([x for x in value_arr if x > 1e-6])
+        value_arr.sort()  # 注意，会改变bias_arr本来的内容
+        if np.isnan(last_value):
+            raise ValueError('最新数据是nan，检查数据')
+        last_value_idx = np.argwhere(value_arr == last_value)[0][0]
+        last_value_quantile = last_value_idx / observation_period
+
+        new_obj = AShareAlphaQuantile()
+        new_obj.sec_code = sec_code
+        new_obj.trade_date = last_trade_date
+        new_obj.value_20 = trans_number_to_float(last_value_quantile)
+        new_obj.observation_period = observation_period
+        session.add(new_obj)
+
+    session.commit()
+    session.close()
+
+
+# 超额收益最近20日的dd
+def calc_dd(s):
+    max_value = s.max()
+    dd = s[-1] / max_value - 1
+    return dd
+
+
+# 计算数组里所有元素的乘积
+def calc_prod(s):
+    prod = reduce(lambda x, y: x * y, s)
+    return prod
+
+
+# 个股T个交易日，滚动的超额收益
+def calc_and_save_rolling_alpha(daily_alpha_df):
+    win_len = 20
+    alpha_rolling_unit_value_df = (1 + daily_alpha_df).rolling(win_len).apply(calc_prod, raw=True)
+    save_df_into_db(alpha_rolling_unit_value_df, AShareAlpha)
+
+
+# 个股超额收益的近期回撤
+def calc_and_save_alpha_dd(daily_alpha_df):
+    win_len = 20
+    alpha_unit_value_df = (1 + daily_alpha_df).cumprod()
+    dd_df = alpha_unit_value_df.rolling(win_len).apply(calc_dd, raw=True)
+    save_df_into_db(dd_df, AShareAlphaDd)
 
 
 def get_a_share_alpha_dd(sec_code):
@@ -308,7 +371,7 @@ def get_a_share_alpha_dd(sec_code):
     return df
 
 
-# 个股超额收益的近期回撤的超额收益
+# 个股超额收益的近期回撤的分位数（加了abs）
 def calc_and_save_alpha_dd_quantile():
     observation_period = 250
     win_len = 20
@@ -348,8 +411,8 @@ def calc_and_save_alpha_dd_quantile():
 
 
 # 指数bias
-sec_codes = ['000016.SH', '000300.SH', '000905.SH']
-calc_and_save_index_bias(sec_codes)  # 指数乖离率
+index_codes = ['000016.SH', '000300.SH', '000905.SH']
+calc_and_save_index_bias(index_codes)  # 指数乖离率
 
 stk_codes = get_sse50_stk_codes()
 calc_and_save_stock_bias(stk_codes)  # 股票乖离率
@@ -360,5 +423,9 @@ calc_and_save_stock_bias_quantile()  # 股票乖离率分位数
 calc_and_save_stock_pe_quantile()  # 股票pe分位数
 calc_and_save_stock_pb_quantile()  # 股票pb分位数
 
-calc_and_save_dd()  # 个股超额收益的近期回撤
+daily_alpha_df = calc_daily_alpha()
+calc_and_save_rolling_alpha(daily_alpha_df)  # 个股超额收益曲线（滚动T日）
+calc_and_save_alpha_quantile()  # 个股超额收益分位数（滚动T日）
+
+calc_and_save_alpha_dd(daily_alpha_df)  # 个股超额收益的近期回撤
 calc_and_save_alpha_dd_quantile()  # 个股超额收益的近期回撤区间内分位数

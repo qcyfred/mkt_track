@@ -44,6 +44,12 @@ def get_trade_date(trade_date, offset):
     return (w.tdaysoffset(offset, trade_date).Data[0][0]).date()
 
 
+def get_sse50_stk_codes():
+    sql = select([ASse50Description.sec_code])
+    df = pd.read_sql(sql, engine)
+    return df['sec_code'].tolist()
+
+
 # 指数日行情
 # TODO: 检查！好像不需要删除 AIndexEodPrice 的数据。因为是从db中已有的最大日期往后推，所以写db时肯定不会重复
 def update_a_index_eod_prices():
@@ -84,9 +90,7 @@ def update_a_index_eod_prices():
 # 更新个股日行情和pb、pe数据（因为没有pb，所以用p/b，在下载数据的时候就算好了）
 # 注意，暂时只更新50的
 def update_a_share_eod_prices_and_fin_pit():
-    sql = select([ASse50Description.sec_code])
-    df = pd.read_sql(sql, engine)
-    sec_codes = df['sec_code'].tolist()
+    sec_codes = get_sse50_stk_codes()
     session = DBSession()
 
     for sec_code in sec_codes:
