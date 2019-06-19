@@ -15,7 +15,7 @@ import datetime
 
 w.start()
 
-# 初始化数据库连接:
+# 初始化数据库连接
 engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=True)
 
 now_dt = datetime.datetime.now()
@@ -46,3 +46,4 @@ for sht_name, clazz in sheet_mapper.items():
     rng.value = df
 
 xb.save()
+xb.close()
