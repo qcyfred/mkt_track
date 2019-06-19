@@ -29,6 +29,15 @@ class ASse50Description(Base):
     sec_name = Column(String(64))
 
 
+class ChinaEtfPrevWeight(Base):
+    __tablename__ = 'china_etf_prev_weight'
+
+    sec_code = Column(String(32), primary_key=True, nullable=False)
+    trade_date = Column(Date, primary_key=True, nullable=False)
+    etf_sec_code = Column(String(32), primary_key=True, nullable=False)
+    weight = Column(Float(asdecimal=True))
+
+
 class AIndexBia(Base):
     __tablename__ = 'a_index_bias'
 

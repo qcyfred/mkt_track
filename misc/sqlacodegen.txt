@@ -1,2 +1,3 @@
 不能用powershell，否则编码可能会出问题
 sqlacodegen mysql://root:root@localhost:3306/db_mkt_track > mkt_track_models.py
+sqlacodegen mysql://qcy:qcy@192.168.39.65:3306/md_stock > md_stock_models.py
