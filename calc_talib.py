@@ -172,9 +172,9 @@ def gen_comment(sec_code):
     sql = select([AShareTalib]).where(AShareTalib.sec_code == sec_code)
     df = pd.read_sql(sql, engine)
     indicators = df.T.to_dict()[0]
-    sec_code_jx = sec_code[:6]
-    sql = """SELECT `close` FROM md_stock.md_day WHERE stock = '{sec_code_jx}' order by d_day DESC limit 0, 1;""".format(
-        sec_code_jx=sec_code_jx)
+    six_digit_sec_code = sec_code[:6]
+    sql = """SELECT `close` FROM md_stock.md_day WHERE stock = '{six_digit_sec_code}' order by d_day DESC limit 0, 1;""".format(
+        six_digit_sec_code=six_digit_sec_code)
     px = engine_quote.execute(sql).fetchall()[0][0]
 
     comment_dict = dict()
