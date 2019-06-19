@@ -1,5 +1,5 @@
 # coding: utf-8
-from sqlalchemy import Column, Date, Float, ForeignKey, Index, String
+from sqlalchemy import Column, Date, Enum, Float, ForeignKey, Index, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.ext.declarative import declarative_base
@@ -189,6 +189,64 @@ class ASharePeQuantile(Base):
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
     observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
     val = Column(Float(asdecimal=True))
+
+    a_share_description = relationship('AShareDescription')
+
+
+class AShareTablibComment(Base):
+    __tablename__ = 'a_share_tablib_comment'
+
+    sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False)
+    trade_date = Column(Date, primary_key=True, nullable=False)
+    freq = Column(Enum('D', 'W', 'M', 'H1', 'M1', 'M5', 'M10', 'M15', 'M30'), nullable=False)
+    ma5 = Column(String(32))
+    ma10 = Column(String(32))
+    ma20 = Column(String(32))
+    ma60 = Column(String(32))
+    ma120 = Column(String(32))
+    ema5 = Column(String(32))
+    ema10 = Column(String(32))
+    ema20 = Column(String(32))
+    ema60 = Column(String(32))
+    ema120 = Column(String(32))
+    macd = Column(String(32))
+    rsi = Column(String(32))
+    stoch = Column(String(32))
+    adx = Column(String(32))
+    cci = Column(String(32))
+    stochrsi = Column(String(32))
+    uo = Column(String(32))
+    roc = Column(String(32))
+    sar = Column(String(32))
+
+    a_share_description = relationship('AShareDescription')
+
+
+class AShareTalib(Base):
+    __tablename__ = 'a_share_talib'
+
+    sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False)
+    trade_date = Column(Date, primary_key=True, nullable=False)
+    freq = Column(Enum('D', 'W', 'M', 'H1', 'M1', 'M5', 'M10', 'M15', 'M30'), nullable=False)
+    ma5 = Column(Float(asdecimal=True))
+    ma10 = Column(Float(asdecimal=True))
+    ma20 = Column(Float(asdecimal=True))
+    ma60 = Column(Float(asdecimal=True))
+    ma120 = Column(Float(asdecimal=True))
+    ema5 = Column(Float(asdecimal=True))
+    ema10 = Column(Float(asdecimal=True))
+    ema20 = Column(Float(asdecimal=True))
+    ema60 = Column(Float(asdecimal=True))
+    ema120 = Column(Float(asdecimal=True))
+    macd = Column(Float(asdecimal=True))
+    rsi = Column(Float(asdecimal=True))
+    stoch = Column(Float(asdecimal=True))
+    adx = Column(Float(asdecimal=True))
+    cci = Column(Float(asdecimal=True))
+    stochrsi = Column(Float(asdecimal=True))
+    uo = Column(Float(asdecimal=True))
+    roc = Column(Float(asdecimal=True))
+    sar = Column(Float(asdecimal=True))
 
     a_share_description = relationship('AShareDescription')
 
