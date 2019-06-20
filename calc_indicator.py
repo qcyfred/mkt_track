@@ -255,7 +255,7 @@ def calc_and_save_stock_pb_quantile():
 
 
 # 注意起止日期
-def get_a_sse50_eod():
+def get_a_sse50_pct_chg():
     fields = ['pct_chg']
     query_fields = [eval('AShareEodPrice.' + field) for field in fields]
     query_fields.extend([AShareEodPrice.sec_code, AShareEodPrice.trade_date])
@@ -290,8 +290,9 @@ def save_df_into_db(df, clazz):
 
 
 # 计算个股每日的超额收益，个股涨跌幅与指数相减
+# 注意：这里是否需要考虑，看交易信号，用20日涨跌幅相除。算收益，才用对冲的算法。
 def calc_daily_alpha():
-    df = get_a_sse50_eod()
+    df = get_a_sse50_pct_chg()
     index_df = get_equity_market_eod('000016.SH', 'pct_chg', is_index=True)
     alpha_pct_df = pd.DataFrame(df.values - index_df[['pct_chg']].values, columns=df.columns, index=df.index)
     alpha_df = alpha_pct_df.divide(100)
