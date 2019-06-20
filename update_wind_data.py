@@ -189,7 +189,7 @@ def update_etfconstituent():
             df.columns = temp.Fields
             df.rename({'wind_code': 'sec_code'}, axis=1, inplace=True)
             df['etf_sec_code'] = '510050.SH'
-            df['trade_date'] = today_yyyymmdd
+            df['trade_date'] = trade_date
             df.to_sql(ChinaEtfPchRedmList.__tablename__, engine, index=False, if_exists='append')
 
 
