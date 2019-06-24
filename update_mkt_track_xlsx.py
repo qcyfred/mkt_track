@@ -25,6 +25,7 @@ today_yyyymmdd = now_dt.strftime('%Y%m%d')
 last_date_in_wind = (w.tdaysoffset(-1, today_date).Data[0][0]).date()  # 可以获取到的最新数据的交易日
 last_date_yyyymmdd = last_date_in_wind.strftime('%Y%m%d')
 
+# TODO: 需要更新etf申赎清单的权重
 sheet_mapper = {
     '个股偏离度': AShareBia,
     '个股偏离度分位数': AShareBiasQuantile,
