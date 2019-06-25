@@ -9,13 +9,20 @@ from mkt_track_models import (ChinaEtfPchRedmList,
                               ChinaEtfPrevWeight,
                               )
 from md_stock_models import MdDay
+import datetime
 
 # 初始化数据库连接
-engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=True)
-engine_quote = create_engine('mysql+pymysql://qcy:qcy@192.168.39.65:3306/md_stock?charset=utf8', echo=True)
+engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=False)
+engine_quote = create_engine('mysql+pymysql://qcy:qcy@192.168.39.65:3306/md_stock?charset=utf8', echo=False)
+
+today_date = datetime.datetime.now().date()
+begin_date = datetime.datetime.now() + datetime.timedelta(days=-7)
 
 # 所有交易日
-sql = select([ChinaEtfPchRedmList.trade_date]).where(ChinaEtfPchRedmList.etf_sec_code == '510050.SH').distinct(
+sql = select([ChinaEtfPchRedmList.trade_date]).where(
+    and_(ChinaEtfPchRedmList.etf_sec_code == '510050.SH',
+         ChinaEtfPchRedmList.trade_date <= today_date,
+         ChinaEtfPchRedmList.trade_date >= begin_date)).distinct(
     ChinaEtfPchRedmList.trade_date)
 df = pd.read_sql(sql, engine)
 trade_dates = df['trade_date'].tolist()
@@ -25,6 +32,7 @@ for i in range(1, len(trade_dates)):
     # 每天持股
     trade_date = trade_dates[i]
     prev_trade_date = trade_dates[i - 1]
+    print(trade_date, prev_trade_date)
     sql = select([ChinaEtfPchRedmList.sec_code, ChinaEtfPchRedmList.volume]).where(
         ChinaEtfPchRedmList.trade_date == trade_date)
     df = pd.read_sql(sql, engine)
