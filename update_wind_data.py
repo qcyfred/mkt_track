@@ -8,6 +8,7 @@
 a_index_eod_prices
 a_share_eod_prices
 a_share_fin_pit
+etfconstituent
 """
 
 from sqlalchemy import create_engine
@@ -167,7 +168,7 @@ def update_a_sse50_description():
     latest_df.to_sql(ASse50Description.__tablename__, con=engine, index=False, if_exists='append')
 
 
-def update_etfconstituent():
+def update_etfconstituent_his():
     session = DBSession()
     last_day_in_db = session.query(func.max(ChinaEtfPchRedmList.trade_date)).one()[0]
     if last_day_in_db is not None:
@@ -193,10 +194,26 @@ def update_etfconstituent():
             df.to_sql(ChinaEtfPchRedmList.__tablename__, engine, index=False, if_exists='append')
 
 
+def update_etfconstituent_today():
+    trade_date = datetime.datetime.now().date()
+    temp = w.wset("etfconstituent",
+                  "date={today_yyyymmdd};windcode=510050.SH;"
+                  "field=wind_code,volume,cash_substitution_mark,"
+                  "cash_substitution_premium_ratio,fixed_substitution_amount".format(
+                      today_yyyymmdd=trade_date.strftime('%Y%m%d')))
+    df = pd.DataFrame(temp.Data).T
+    df.columns = temp.Fields
+    df.rename({'wind_code': 'sec_code'}, axis=1, inplace=True)
+    df['etf_sec_code'] = '510050.SH'
+    df['trade_date'] = trade_date
+    df.to_sql(ChinaEtfPchRedmList.__tablename__, engine, index=False, if_exists='append')
+
+
 # 主程序
 # update_a_share_description()  # 所有A股
 # update_a_sse50_description()  # 更换成分股后运行
 
 update_a_index_eod_prices()  # 指数日行情
 update_a_share_eod_prices_and_fin_pit()  # 更新个股日行情和pb、pe数据（因为没有pb，所以用p/b，在下载数据的时候就算好了）
-update_etfconstituent()  # 更新每日etf的申赎清单
+# update_etfconstituent_his()  # 更新etf历史申赎清单
+update_etfconstituent_today()  # 更新今日etf申赎清单（盘前公布，昨日价格）
