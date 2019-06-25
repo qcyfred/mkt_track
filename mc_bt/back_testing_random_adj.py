@@ -1,5 +1,6 @@
 # coding: utf-8
 # TODO: 随机超配或低配，回测
+import ffn
 import random
 from sqlalchemy import create_engine
 from sqlalchemy import (select,
@@ -9,13 +10,16 @@ from mkt_track_models import (ChinaEtfPchRedmList,
                               ChinaEtfPrevWeight,
                               )
 from md_stock_models import MdDay
+import datetime
 
 # 初始化数据库连接
-engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=True)
-engine_quote = create_engine('mysql+pymysql://qcy:qcy@192.168.39.65:3306/md_stock?charset=utf8', echo=True)
+engine = create_engine('mysql+pymysql://root:root@localhost:3306/db_mkt_track?charset=utf8', echo=False)
+engine_quote = create_engine('mysql+pymysql://qcy:qcy@192.168.39.65:3306/md_stock?charset=utf8', echo=False)
 
 # TODO：修改回测起始日期
 begin_yyyymmdd = '20170101'
+
+t1 = datetime.datetime.now()
 
 # 所有交易日
 sql = select([ChinaEtfPchRedmList.trade_date]).where(ChinaEtfPchRedmList.etf_sec_code == '510050.SH').distinct(
@@ -38,8 +42,8 @@ pos_df = origin_pos_df.pivot(index='trade_date', columns='sec_code', values='wei
 
 N1 = 5
 N2 = 5
-k1 = 0.5
-k2 = 0.5
+k1 = 0
+k2 = 0
 
 # random.randint(a, b) # [a, b]
 # random.randrange(0, 50)  # [a, b)
@@ -48,8 +52,11 @@ k2 = 0.5
 one_day_pos_list = []
 for i in range(len(pos_df)):
     one_day_pos = pos_df.iloc[i, :].copy().dropna()
-    over_bought_idxs = [random.randrange(0, 50) for _ in range(N1)]
-    over_sold_idxs = [random.randrange(0, 50) for _ in range(N2)]
+
+    # 注意，这里是10个，5+5，over_bought_idxs 和 over_sold_idxs 不能重叠
+    idxs = [random.randrange(0, 50) for _ in range(N1 + N2)]
+    over_bought_idxs = idxs[:N1]
+    over_sold_idxs = idxs[N1:]
 
     one_day_pos[over_bought_idxs] *= (1 + k1)
     one_day_pos[over_sold_idxs] *= (1 - k2)
@@ -70,3 +77,18 @@ ret_df.columns = real_pos_df.columns
 
 daily_ret = (real_pos_df * ret_df).sum(axis=1)
 nav_df = (1 + daily_ret).cumprod()
+df_to_save = pd.DataFrame(nav_df, columns=['nav']).reset_index()
+# df_to_save['sim_idx'] = sim_idx
+
+
+# t2 = datetime.datetime.now()
+
+def calc_performance(raw_df):
+    df = raw_df.copy()
+    df.index = pd.to_datetime(df.index)
+    stat = df.calc_stats()
+    cagr = stat.cagr
+    calmar = stat.calmar
+    sortino = stat.yearly_sortino
+    max_dd = stat.max_drawdown
+    sharpe = stat.yearly_sharpe
