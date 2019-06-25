@@ -1,7 +1,7 @@
 # coding: utf-8
-from sqlalchemy import Column, Date, Enum, Float, ForeignKey, Index, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Date, Enum, Float, ForeignKey, Index, String, Table
 from sqlalchemy.dialects.mysql import INTEGER
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -36,6 +36,15 @@ class ChinaEtfPrevWeight(Base):
     trade_date = Column(Date, primary_key=True, nullable=False)
     etf_sec_code = Column(String(32), primary_key=True, nullable=False)
     weight = Column(Float(asdecimal=True))
+
+
+t_nav_df = Table(
+    'nav_df', metadata,
+    Column('sim_idx', INTEGER(11), index=True),
+    Column('trade_date', Date),
+    Column('nav', Float(asdecimal=True)),
+    Column('params', String(128))
+)
 
 
 class AIndexBia(Base):
@@ -86,6 +95,7 @@ class AShareAlpha(Base):
     sec_code = Column(ForeignKey('a_share_description.sec_code'), primary_key=True, nullable=False, index=True)
     trade_date = Column(Date, primary_key=True, nullable=False)
     value_20 = Column(Float(asdecimal=True))
+    value_60 = Column(Float(asdecimal=True))
 
     a_share_description = relationship('AShareDescription')
 
@@ -121,6 +131,7 @@ class AShareAlphaQuantile(Base):
     trade_date = Column(Date, primary_key=True, nullable=False, index=True)
     observation_period = Column(INTEGER(11), primary_key=True, nullable=False)
     value_20 = Column(Float(asdecimal=True))
+    value_60 = Column(Float(asdecimal=True))
 
     a_share_description = relationship('AShareDescription')
 
