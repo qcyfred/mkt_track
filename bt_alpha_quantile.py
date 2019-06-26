@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from sqlalchemy import create_engine
 from sqlalchemy import (select,
                         and_)
-from mkt_track_models import (ChinaEtfPchRedmList,
+from mkt_track_bt_models import (ChinaEtfPchRedmList,
                               ChinaEtfPrevWeight,
                               AShareAlphaQuantile,
                               AIndexEodPrice,
