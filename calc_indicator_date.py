@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 import pandas as pd
 import numpy as np
 from functools import reduce
-from mkt_track_models import (AShareAlpha,
+from mkt_track_bt_models import (AShareAlpha,
                               AShareAlphaQuantile,
                               ASse50Description,
                               AIndexEodPrice,
@@ -86,7 +86,9 @@ def calc_and_save_index_bias(sec_codes):
 
 
 # 个股bias
-def calc_and_save_stock_bias(sec_codes):
+def calc_and_save_stock_bias():
+    sql = select([ChinaEtfPchRedmList.sec_code]).distinct(ChinaEtfPchRedmList.sec_code)
+    sec_codes = pd.read_sql(sql, engine)['sec_code'].tolist()  # 曾经当过50成分股的所有股票
     for sec_code in sec_codes:
         df = get_equity_market_eod(sec_code, fields=['close', 'adjfactor'], is_index=False)
         df['close'] = df['close'] * df['adjfactor']  # 后复权
@@ -158,8 +160,8 @@ def calc_and_save_stock_bias_quantile(end_yyymmdd):
 
     session = DBSession()
 
-    # TODO: ，每天50的成分股代码还不一样！
-    sec_codes = get_sse50_stk_codes()
+    # 每天50的成分股代码不一样！
+    sec_codes = get_sse50_stk_codes(end_yyymmdd)
 
     for sec_code in sec_codes:
         bias_df = get_bias_eod(sec_code, end_yyymmdd, is_index=False)
@@ -167,8 +169,8 @@ def calc_and_save_stock_bias_quantile(end_yyymmdd):
         last_bias_quantile_dict = dict()
         last_trade_date = bias_df.index[-1]
         for win_len in win_lens:
-            print(sec_code, win_len)
-            if bias_df['value_%d' % win_len].all(None):  # 如果全是None（如刚刚上市，或连续停牌）
+            # if bias_df['value_%d' % win_len].all(None):  # 如果全是None（如刚刚上市，或连续停牌）
+            if (bias_df['value_%d' % win_len].isna()).sum() == len(bias_df['value_%d' % win_len]):
                 bias_df['value_%d' % win_len] = None
                 last_bias_quantile_dict[win_len] = None
             else:
@@ -503,27 +505,26 @@ def truncate_db():
 # 指数bias
 # index_codes = ['000016.SH', '000300.SH', '000905.SH']
 # calc_and_save_index_bias(index_codes)  # 指数乖离率
-#
-# stk_codes = get_sse50_stk_codes()
-# calc_and_save_stock_bias(stk_codes)  # 股票乖离率
-
 # calc_and_save_index_bias_quantile(end_yyymmdd='20190506')  # 指数乖离率分位数
-# calc_and_save_stock_bias_quantile(end_yyymmdd='20190506')  # 股票乖离率分位数
-
-# calc_and_save_stock_pe_quantile()  # 股票pe分位数
-# calc_and_save_stock_pb_quantile()  # 股票pb分位数
 
 
-#######################
-daily_alpha_df = calc_daily_alpha()
-calc_and_save_rolling_alpha(daily_alpha_df)  # 个股超额收益曲线（滚动T日）
-
-############# 每天成分股的分位数
 sql = select([AIndexEodPrice.trade_date]).where(and_(AIndexEodPrice.sec_code == '000016.SH',
                                                      AIndexEodPrice.trade_date >= '20170101')).distinct(
     AIndexEodPrice.trade_date)
 df = pd.read_sql(sql, engine)
 trade_dates = df['trade_date'].tolist()
+
+# # calc_and_save_stock_bias()  # 股票乖离率
+# for trade_date in trade_dates:
+#     calc_and_save_stock_bias_quantile(end_yyymmdd=trade_date)  # 股票乖离率分位数
+#
+# # calc_and_save_stock_pe_quantile()  # 股票pe分位数
+# # calc_and_save_stock_pb_quantile()  # 股票pb分位数
+#
+#
+# #######################
+# daily_alpha_df = calc_daily_alpha()
+# calc_and_save_rolling_alpha(daily_alpha_df)  # 个股超额收益曲线（滚动T日）
 for trade_date in trade_dates:
     calc_and_save_alpha_quantile(trade_date)  # 个股超额收益分位数（滚动T日）
 
